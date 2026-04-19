@@ -10,7 +10,9 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+import os
 from pathlib import Path
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,13 +22,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-xxlw=zlk^ps6ug54v=*_6009q50#ektorxyn34dzh$^4cnz)h)'
-
+SECRET_KEY = os.environ.get(
+    'SECRET_KEY',
+    'django-insecure-*mdj@2u6^usa-6e=n=shimy%pkhta^#%4kbu2omkdqfiz-achg'
+)
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
 
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+CORS_ALLOW_ALL_ORIGINS = True
 
 # Application definition
 
@@ -37,6 +42,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    # Third-party apps
+    'corsheaders',
+    'rest_framework',
+    'drf_spectacular',
+
+    # Local apps
+    'core',
+    'scraper',
 ]
 
 MIDDLEWARE = [
@@ -74,8 +88,12 @@ WSGI_APPLICATION = 'config.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.environ.get('DB_NAME', 'scraping_db'),
+        'USER': os.environ.get('DB_USER', 'scraping_user'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'scraping_password'),
+        'HOST': os.environ.get('DB_HOST', 'db'),
+        'PORT': os.environ.get('DB_PORT', '5432'),
     }
 }
 
@@ -104,7 +122,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Warsaw'
 
 USE_I18N = True
 
@@ -115,3 +133,87 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# ---------------------------------------------------------------------------
+# Django REST Framework
+# ---------------------------------------------------------------------------
+REST_FRAMEWORK = {
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DATETIME_FORMAT': "%Y-%m-%dT%H:%M:%SZ",
+    # Authentication — Token-based + Session for admin/browser
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    # Permissions — read is public, mutations require auth
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticatedOrReadOnly',
+    ],
+    # Rate limiting — protection of API against misuse
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '200/day',
+        'user': '2000/day'
+    }
+}
+
+# ---------------------------------------------------------------------------
+# drf-spectacular – OpenAPI 3.0 schema generation
+# ---------------------------------------------------------------------------
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Configurable Scraping API',
+    'DESCRIPTION': 'System for managing sources and scraping results in the background.',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+# ---------------------------------------------------------------------------
+# Cache — Redis (DB 1), used for distributed locks (deduplication)
+# ---------------------------------------------------------------------------
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.redis.RedisCache",
+        "LOCATION": os.environ.get('REDIS_URL', 'redis://redis:6379/1'),
+    }
+}
+
+# ---------------------------------------------------------------------------
+# Celery – distributed task queue (DB 0)
+# ---------------------------------------------------------------------------
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'redis://redis:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
+
+# Serializac
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Protection of resources (Resilience & OOM Killer Protection)
+CELERY_TASK_ACKS_LATE = True                # Confirmed success ONLY after task execution [1, 2]
+CELERY_TASK_REJECT_ON_WORKER_LOST = True    # Re-queue if container is killed (protects against OOM) [4]
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1       # Optimization for long-running scraping tasks (1 task = 1 worker)
+
+# Time limits protecting against hanging pages
+CELERY_TASK_SOFT_TIME_LIMIT = 60 * 10       # 10 minutes - allows task to cleanly surrender
+CELERY_TASK_TIME_LIMIT = 60 * 12            # 12 minutes - hard worker kill (SIGKILL)
+
+# Queue configuration
+CELERY_TASK_DEFAULT_QUEUE = 'celery'        # Explicit default queue for light tasks
+CELERY_TASK_ROUTES = {
+    # Heavy IO operations go to a dedicated queue
+    'scraper.tasks.perform_scraping_task': {'queue': 'scraping_queue'},
+}
+
+# Scheduling
+CELERY_BEAT_SCHEDULE = {
+    'manager-heartbeat-every-minute': {
+        'task': 'scraper.tasks.manager_heartbeat',
+        'schedule': crontab(minute='*'),
+    },
+}
