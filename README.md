@@ -80,15 +80,22 @@ The system provides a user-friendly management interface via Django Admin. Acces
 
 ### Screenshots
 
-| **Sources Overview** | **Source Configuration** |
-|:---:|:---:|
-| ![Sources List](docs/screenshots/admin_source_list.png) | ![Source Detail 1](docs/screenshots/admin_source_detail_1.png)<br>![Source Detail 2](docs/screenshots/admin_source_detail_2.png) |
-| *Manage all your scraping targets in one place* | *Fine-tune extraction rules and schedules* |
+#### Sources Overview
+![Sources List](docs/screenshots/admin_source_list.png)
+*Manage all your scraping targets in one place*
 
-| **Scraping Results** | **Result Inspection** |
-|:---:|:---:|
-| ![Results List](docs/screenshots/admin_result_list.png) | ![Result Detail](docs/screenshots/admin_result_detail.png) |
-| *Browse history of all collected data* | *Deep dive into specific result JSON and metadata* |
+#### Source Configuration
+![Source Detail 1](docs/screenshots/admin_source_detail_1.png)
+![Source Detail 2](docs/screenshots/admin_source_detail_2.png)
+*Fine-tune extraction rules and schedules*
+
+#### Scraping Results
+![Results List](docs/screenshots/admin_result_list.png)
+*Browse history of all collected data*
+
+#### Result Inspection
+![Result Detail](docs/screenshots/admin_result_detail.png)
+*Deep dive into specific result JSON and metadata*
 
 ---
 
