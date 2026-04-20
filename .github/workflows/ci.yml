@@ -1,0 +1,32 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup environment variables
+        run: cp .env.example .env
+
+      - name: Build Docker image
+        run: docker compose build web
+
+      - name: Run Black code formatter check
+        run: docker compose run --rm web black --check .
+
+      - name: Run Flake8 linter
+        run: docker compose run --rm web flake8 .
+
+      - name: Run Pytest tests
+        run: docker compose run --rm web pytest
