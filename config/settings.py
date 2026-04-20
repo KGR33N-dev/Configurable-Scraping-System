@@ -76,8 +76,7 @@ DATABASES = {
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation."
-        "UserAttributeSimilarityValidator"
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"
     },
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
     {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
@@ -122,8 +121,7 @@ REST_FRAMEWORK = {
 # ---------------------------------------------------------------------------
 SPECTACULAR_SETTINGS = {
     "TITLE": "Configurable Scraping API",
-    "DESCRIPTION": "System for managing sources and scraping results "
-    "in the background.",
+    "DESCRIPTION": "System for managing sources and scraping results in the background.",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
 }

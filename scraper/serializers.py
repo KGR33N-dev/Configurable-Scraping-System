@@ -150,8 +150,7 @@ class ScrapingSourceSerializer(serializers.ModelSerializer):
                 if key != "pagination" and config.get("type") == "nested":
                     if not config.get("fields"):
                         raise serializers.ValidationError(
-                            f"Field '{key}' is type 'nested' "
-                            "but missing 'fields' object."
+                            f"Field '{key}' is type 'nested' but missing 'fields' object."
                         )
         except JsonSchemaError as e:
             # Format path for readability: root -> field -> subfield

@@ -104,10 +104,7 @@ class ScrapingSourceViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=["post"], url_path="bulk_run_now")
     def bulk_run_now(self, request: Request) -> Response:
-        """
-        Enqueue a scrape for every active source. Tasks run in parallel.
-        Returns HTTP 202.
-        """
+        """Enqueue a scrape for every active source. Tasks run in parallel. Returns HTTP 202."""
         active_sources: QuerySet[ScrapingSource] = ScrapingSource.objects.filter(
             is_active=True
         )
@@ -137,10 +134,7 @@ class ScrapingSourceViewSet(viewsets.ModelViewSet):
         if len(results) < 2:
             return Response(
                 {
-                    "detail": (
-                        "Not enough results to compare. "
-                        "Need at least 2 scraping runs."
-                    ),
+                    "detail": "Not enough results to compare. Need at least 2 scraping runs.",
                     "result_count": len(results),
                 },
                 status=status.HTTP_200_OK,

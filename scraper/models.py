@@ -64,9 +64,7 @@ class ScrapedResult(models.Model):
         null=True,
         blank=True,
         db_index=True,  # Speeds up ?changed_only=true filter
-        help_text=(
-            "True if scraped data differs from the previous result for this source."
-        ),
+        help_text="True if scraped data differs from the previous result for this source.",
     )
 
     # Set once on creation, never updated

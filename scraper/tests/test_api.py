@@ -1,7 +1,6 @@
 """
 Integration tests for the REST API.
-Verifies the full HTTP -> DB flow, including views, serializers, models,
-and celery mocks.
+Verifies the full HTTP -> DB flow, including views, serializers, models, and celery mocks.
 """
 import pytest
 from django.contrib.auth.models import User
