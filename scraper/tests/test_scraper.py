@@ -2,7 +2,6 @@
 Unit tests for the scraping engine (WebsiteScraper).
 Verifies HTML parsing edge cases without HTTP requests.
 """
-import pytest
 from bs4 import BeautifulSoup
 from scraper.scraper import WebsiteScraper
 

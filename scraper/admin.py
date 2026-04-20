@@ -110,7 +110,10 @@ def _render_diff(old_data: Any, new_data: Any) -> str:
     changed (amber with from→to), or unchanged (grey, collapsed).
     For non-dict payloads: a simple before/after comparison.
     """
-    STYLE_BASE = "font-family:monospace;font-size:13px;padding:6px 12px;border-radius:4px;margin:2px 0;display:block;word-break:break-word;"
+    STYLE_BASE = (
+        "font-family:monospace;font-size:13px;padding:6px 12px;"
+        "border-radius:4px;margin:2px 0;display:block;word-break:break-word;"
+    )
 
     def _val(v: Any) -> str:
         try:
@@ -123,9 +126,11 @@ def _render_diff(old_data: Any, new_data: Any) -> str:
             return '<em style="color:#999">— data identical —</em>'
         return (
             f'<div style="{STYLE_BASE}background:#4a1010;color:#f88">'
-            f'<strong>Before:</strong><br><pre style="margin:4px 0;white-space:pre-wrap">{escape(_val(old_data))}</pre></div>'
+            f'<strong>Before:</strong><br><pre style="margin:4px 0;'
+            f'white-space:pre-wrap">{escape(_val(old_data))}</pre></div>'
             f'<div style="{STYLE_BASE}background:#0f3a1a;color:#8f8">'
-            f'<strong>After:</strong><br><pre style="margin:4px 0;white-space:pre-wrap">{escape(_val(new_data))}</pre></div>'
+            f'<strong>After:</strong><br><pre style="margin:4px 0;'
+            f'white-space:pre-wrap">{escape(_val(new_data))}</pre></div>'
         )
 
     all_keys = sorted(set(old_data.keys()) | set(new_data.keys()))
@@ -142,22 +147,26 @@ def _render_diff(old_data: Any, new_data: Any) -> str:
             rows.append(
                 f'<div style="{STYLE_BASE}background:#0f3a1a;color:#8f8">'
                 f'<span style="opacity:.7">+</span> <strong>{k}</strong>: '
-                f'<span style="color:#b3ffb3">{escape(_val(new_data[key]))}</span></div>'
+                f'<span style="color:#b3ffb3">'
+                f"{escape(_val(new_data[key]))}</span></div>"
             )
         elif in_old and not in_new:
             removed += 1
             rows.append(
                 f'<div style="{STYLE_BASE}background:#4a1010;color:#f88">'
                 f'<span style="opacity:.7">−</span> <strong>{k}</strong>: '
-                f'<span style="color:#ffb3b3">{escape(_val(old_data[key]))}</span></div>'
+                f'<span style="color:#ffb3b3">'
+                f"{escape(_val(old_data[key]))}</span></div>"
             )
         elif old_data[key] != new_data[key]:
             changed += 1
             rows.append(
                 f'<div style="{STYLE_BASE}background:#3d2e00;color:#ffd">'
                 f'<span style="opacity:.7">~</span> <strong>{k}</strong>:<br>'
-                f'&nbsp;&nbsp;<span style="color:#f88;font-size:12px">− {escape(_val(old_data[key]))}</span><br>'
-                f'&nbsp;&nbsp;<span style="color:#8f8;font-size:12px">+ {escape(_val(new_data[key]))}</span></div>'
+                f'&nbsp;&nbsp;<span style="color:#f88;font-size:12px">'
+                f"− {escape(_val(old_data[key]))}</span><br>"
+                f'&nbsp;&nbsp;<span style="color:#8f8;font-size:12px">'
+                f"+ {escape(_val(new_data[key]))}</span></div>"
             )
         else:
             rows.append(
@@ -327,7 +336,10 @@ class ScrapedResultAdmin(admin.ModelAdmin):
     data_rendered.short_description = "Data"
 
     def diff_rendered(self, obj: ScrapedResult) -> str:
-        """Colour-coded diff vs. the previous scrape — shown only when has_changed=True."""
+        """
+        Colour-coded diff vs. the previous scrape — shown only when
+        has_changed=True.
+        """
         if obj.has_changed is not True:
             return mark_safe(
                 '<em style="color:#555">— no diff (data unchanged or unknown) —</em>'
@@ -344,7 +356,8 @@ class ScrapedResultAdmin(admin.ModelAdmin):
 
         if previous is None:
             return mark_safe(
-                '<em style="color:#555">— first scrape for this source, no previous result to compare —</em>'
+                '<em style="color:#555">— first scrape for this source, '
+                "no previous result to compare —</em>"
             )
 
         return mark_safe(_render_diff(previous.data, obj.data))
