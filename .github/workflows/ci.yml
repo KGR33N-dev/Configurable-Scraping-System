@@ -9,6 +9,11 @@ on:
     branches:
       - main
 
+env:
+  # Opt-in to Node.js 24 for JavaScript actions to avoid deprecation warnings for Node.js 20.
+  # GitHub runners will switch to Node.js 24 by default in mid-2026.
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   test-and-lint:
     runs-on: ubuntu-latest
