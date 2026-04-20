@@ -26,7 +26,7 @@ class WebsiteScraper:
         "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36",
     ]
 
-    def scrape(self, url: str, rules: dict, extraction_type: str = 'html') -> dict:
+    def scrape(self, url: str, rules: dict, extraction_type: str = "html") -> dict:
         """
         Main entry point.
 
@@ -39,7 +39,7 @@ class WebsiteScraper:
             Dict of {field_name: value} ready to store in ScrapedResult.data
         """
         headers = {"User-Agent": random.choice(self.USER_AGENTS)}
-        if extraction_type == 'json':
+        if extraction_type == "json":
             return self._scrape_json(url=url, rules=rules, headers=headers)
         return self._scrape_html(url=url, rules=rules, headers=headers)
 
@@ -58,7 +58,9 @@ class WebsiteScraper:
             httpx.RequestError: network error (triggers Celery retry)
             ValueError: response is not valid JSON
         """
-        with httpx.Client(timeout=15.0, follow_redirects=True, headers=headers) as client:
+        with httpx.Client(
+            timeout=15.0, follow_redirects=True, headers=headers
+        ) as client:
             try:
                 response = client.get(url)
                 response.raise_for_status()
@@ -74,8 +76,8 @@ class WebsiteScraper:
         for field_name, rule_config in rules.items():
             if not isinstance(rule_config, dict):
                 continue
-            path = rule_config.get('path')
-            extract_type = rule_config.get('type', 'single')
+            path = rule_config.get("path")
+            extract_type = rule_config.get("type", "single")
 
             if not path:
                 result_data[field_name] = None
@@ -83,7 +85,7 @@ class WebsiteScraper:
 
             value = self._resolve_json_path(payload, path)
 
-            if extract_type == 'list' and not isinstance(value, list):
+            if extract_type == "list" and not isinstance(value, list):
                 value = [value] if value is not None else []
 
             result_data[field_name] = value
@@ -99,7 +101,7 @@ class WebsiteScraper:
         Returns None if any segment is missing or invalid.
         """
         current = data
-        for part in path.split('.'):
+        for part in path.split("."):
             if current is None:
                 return None
             if isinstance(current, list):
@@ -133,12 +135,14 @@ class WebsiteScraper:
         current_url: Optional[str] = url
         pages_scraped = 0
 
-        pagination_config = rules.get('pagination', {})
-        next_selector: Optional[str] = pagination_config.get('selector')
-        max_pages: int = pagination_config.get('max_pages', 1)
-        delay: float = pagination_config.get('delay_between_pages', 0)
+        pagination_config = rules.get("pagination", {})
+        next_selector: Optional[str] = pagination_config.get("selector")
+        max_pages: int = pagination_config.get("max_pages", 1)
+        delay: float = pagination_config.get("delay_between_pages", 0)
 
-        with httpx.Client(timeout=15.0, follow_redirects=True, headers=headers) as client:
+        with httpx.Client(
+            timeout=15.0, follow_redirects=True, headers=headers
+        ) as client:
             while current_url and pages_scraped < max_pages:
                 if pages_scraped > 0 and delay > 0:
                     logger.info(f"Politeness delay: waiting {delay}s...")
@@ -152,10 +156,10 @@ class WebsiteScraper:
                     logger.error(f"Network error on page {pages_scraped + 1}: {e}")
                     break  # Return whatever was collected so far
 
-                soup = BeautifulSoup(response.text, 'html.parser')
+                soup = BeautifulSoup(response.text, "html.parser")
 
                 for field_name, rule_config in rules.items():
-                    if field_name == 'pagination':
+                    if field_name == "pagination":
                         continue  # 'pagination' is config, not a data field
 
                     extracted = self._extract_field(soup, rule_config)
@@ -171,9 +175,9 @@ class WebsiteScraper:
 
                 if next_selector and pages_scraped < max_pages:
                     next_el = soup.select_one(next_selector)
-                    if next_el and next_el.has_attr('href'):
+                    if next_el and next_el.has_attr("href"):
                         # urljoin handles both absolute and relative links
-                        current_url = urljoin(current_url, next_el['href'])
+                        current_url = urljoin(current_url, next_el["href"])
                     else:
                         current_url = None
                 else:
@@ -197,44 +201,48 @@ class WebsiteScraper:
         if not isinstance(rule_config, dict):
             return None
 
-        css_selector: Optional[str] = rule_config.get('selector')
-        extract_type: str = rule_config.get('type', 'single')
-        attribute: str = rule_config.get('attribute', 'text')
-        format_type: Optional[str] = rule_config.get('format')
+        css_selector: Optional[str] = rule_config.get("selector")
+        extract_type: str = rule_config.get("type", "single")
+        attribute: str = rule_config.get("attribute", "text")
+        format_type: Optional[str] = rule_config.get("format")
 
         if not css_selector:
             return None
 
         value: Any = None
-        if extract_type == 'single':
+        if extract_type == "single":
             element = soup.select_one(css_selector)
             if element:
                 try:
-                    value = element[attribute] if attribute != 'text' else element.get_text(strip=True)
+                    value = (
+                        element[attribute]
+                        if attribute != "text"
+                        else element.get_text(strip=True)
+                    )
                 except KeyError:
                     value = None  # Element exists but lacks the requested attribute
 
-        elif extract_type == 'list':
+        elif extract_type == "list":
             elements = soup.select(css_selector)
-            if attribute != 'text':
+            if attribute != "text":
                 value = [el[attribute] for el in elements if el.has_attr(attribute)]
             else:
                 value = [el.get_text(strip=True) for el in elements]
 
-        elif extract_type == 'nested':
+        elif extract_type == "nested":
             containers = soup.select(css_selector)
-            nested_fields: dict = rule_config.get('fields', {})
+            nested_fields: dict = rule_config.get("fields", {})
             results: list[dict] = []
             for container in containers:
                 item: dict[str, Any] = {}
                 for f_name, f_config in nested_fields.items():
-                    if isinstance(f_config, dict) and 'type' not in f_config:
-                        f_config['type'] = 'single'
+                    if isinstance(f_config, dict) and "type" not in f_config:
+                        f_config["type"] = "single"
                     item[f_name] = self._extract_field(container, f_config)
                 results.append(item)
             return results
 
-        if extract_type != 'nested':
+        if extract_type != "nested":
             if isinstance(value, list):
                 return [self._post_process(v, format_type) for v in value]
             return self._post_process(value, format_type)
@@ -258,41 +266,41 @@ class WebsiteScraper:
         if value is None or not format_type:
             return value
 
-        if format_type == 'decimal':
+        if format_type == "decimal":
             if not isinstance(value, str):
                 return value
-            clean_val = re.sub(r'[^\d.,-]', '', value)
-            clean_val = clean_val.replace(',', '.')
+            clean_val = re.sub(r"[^\d.,-]", "", value)
+            clean_val = clean_val.replace(",", ".")
             try:
                 return float(Decimal(clean_val))
             except (InvalidOperation, ValueError):
                 return value
 
-        if format_type == 'int':
+        if format_type == "int":
             try:
-                return int(re.sub(r'[^\d-]', '', str(value)))
+                return int(re.sub(r"[^\d-]", "", str(value)))
             except (ValueError, TypeError):
                 return value
 
-        if format_type == 'bool':
+        if format_type == "bool":
             if isinstance(value, bool):
                 return value
             normalized = str(value).strip().lower()
-            if normalized in ('true', 'yes', '1', 'on'):
+            if normalized in ("true", "yes", "1", "on"):
                 return True
-            if normalized in ('false', 'no', '0', 'off'):
+            if normalized in ("false", "no", "0", "off"):
                 return False
             return value  # Unrecognised — keep original
 
-        if format_type == 'strip':
+        if format_type == "strip":
             if isinstance(value, str):
-                return re.sub(r'\s+', ' ', value).strip()
+                return re.sub(r"\s+", " ", value).strip()
             return value
 
-        if format_type == 'uppercase':
+        if format_type == "uppercase":
             return str(value).upper() if isinstance(value, str) else value
 
-        if format_type == 'lowercase':
+        if format_type == "lowercase":
             return str(value).lower() if isinstance(value, str) else value
 
         logger.warning(f"Unknown format_type '{format_type}' — value returned as-is.")

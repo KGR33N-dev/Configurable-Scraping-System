@@ -12,6 +12,7 @@ from .models import ScrapingSource, ScrapedResult
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _render_data(data: Any) -> str:
     """
     Render a JSONB field as readable HTML.
@@ -48,11 +49,11 @@ def _render_data(data: Any) -> str:
         return (
             '<div style="overflow-x:auto">'
             '<table style="border-collapse:collapse;width:100%;'
-            'font-family:monospace;font-size:13px;color:#e0e0e0;'
+            "font-family:monospace;font-size:13px;color:#e0e0e0;"
             'background:#1e1e1e;border-radius:6px;overflow:hidden">'
             f'<thead><tr style="background:#111">{header_cells}</tr></thead>'
-            f'<tbody>{rows_html}</tbody>'
-            '</table></div>'
+            f"<tbody>{rows_html}</tbody>"
+            "</table></div>"
         )
 
     # Case 2: pretty JSON with syntax highlighting
@@ -66,25 +67,25 @@ def _render_data(data: Any) -> str:
         escaped: str = escape(line)
         # Keys (quoted string before colon)
         escaped = re.sub(
-            r'(&quot;)([^&]+)(&quot;)(\s*:)',
+            r"(&quot;)([^&]+)(&quot;)(\s*:)",
             r'<span style="color:#9cdcfe">\1\2\3</span>\4',
             escaped,
         )
         # String values
         escaped = re.sub(
-            r'(:\s*)(&quot;)([^&]*)(&quot;)',
+            r"(:\s*)(&quot;)([^&]*)(&quot;)",
             r'\1<span style="color:#ce9178">\2\3\4</span>',
             escaped,
         )
         # Numbers
         escaped = re.sub(
-            r'(:\s*)(-?\d+\.?\d*)',
+            r"(:\s*)(-?\d+\.?\d*)",
             r'\1<span style="color:#b5cea8">\2</span>',
             escaped,
         )
         # Literals
         escaped = re.sub(
-            r'\b(true|false|null)\b',
+            r"\b(true|false|null)\b",
             r'<span style="color:#569cd6">\1</span>',
             escaped,
         )
@@ -94,10 +95,10 @@ def _render_data(data: Any) -> str:
 
     return (
         '<pre style="background:#1e1e1e;color:#d4d4d4;padding:14px 18px;'
-        'border-radius:8px;font-size:13px;line-height:1.6;overflow-x:auto;'
-        'max-height:500px;overflow-y:auto;margin:0;white-space:pre-wrap;'
+        "border-radius:8px;font-size:13px;line-height:1.6;overflow-x:auto;"
+        "max-height:500px;overflow-y:auto;margin:0;white-space:pre-wrap;"
         'word-break:break-word;border:1px solid #333">'
-        f'{highlighted}</pre>'
+        f"{highlighted}</pre>"
     )
 
 
@@ -109,7 +110,7 @@ def _render_diff(old_data: Any, new_data: Any) -> str:
     changed (amber with from→to), or unchanged (grey, collapsed).
     For non-dict payloads: a simple before/after comparison.
     """
-    STYLE_BASE = 'font-family:monospace;font-size:13px;padding:6px 12px;border-radius:4px;margin:2px 0;display:block;word-break:break-word;'
+    STYLE_BASE = "font-family:monospace;font-size:13px;padding:6px 12px;border-radius:4px;margin:2px 0;display:block;word-break:break-word;"
 
     def _val(v: Any) -> str:
         try:
@@ -161,7 +162,7 @@ def _render_diff(old_data: Any, new_data: Any) -> str:
         else:
             rows.append(
                 f'<div style="{STYLE_BASE}background:#1e1e1e;color:#555">'
-                f'&nbsp;&nbsp;<strong>{k}</strong>: {escape(_val(old_data[key]))}</div>'
+                f"&nbsp;&nbsp;<strong>{k}</strong>: {escape(_val(old_data[key]))}</div>"
             )
 
     summary = (
@@ -174,9 +175,7 @@ def _render_diff(old_data: Any, new_data: Any) -> str:
     return (
         f'<div style="background:#111;border:1px solid #333;border-radius:8px;'
         f'padding:12px;max-height:600px;overflow-y:auto">'
-        f'{summary}'
-        + ''.join(rows)
-        + '</div>'
+        f"{summary}" + "".join(rows) + "</div>"
     )
 
 
@@ -184,60 +183,81 @@ def _render_diff(old_data: Any, new_data: Any) -> str:
 # Inline
 # ---------------------------------------------------------------------------
 
+
 class ScrapedResultInline(admin.TabularInline):
     """Show up to 5 latest results directly on the ScrapingSource change page."""
 
     model = ScrapedResult
     extra = 0
     max_num = 5
-    readonly_fields = ['created_at', 'data_pretty']
+    readonly_fields = ["created_at", "data_pretty"]
 
     def data_pretty(self, obj: ScrapedResult) -> str:
         # mark_safe is safe here — _render_data() escapes all user data.
         # format_html() would misinterpret { } in CSS/JSON as template placeholders.
         return mark_safe(_render_data(obj.data))
-    data_pretty.short_description = 'Data'
+
+    data_pretty.short_description = "Data"
 
 
 # ---------------------------------------------------------------------------
 # ScrapingSource
 # ---------------------------------------------------------------------------
 
+
 @admin.register(ScrapingSource)
 class ScrapingSourceAdmin(admin.ModelAdmin):
     list_display = [
-        'name', 'url', 'frequency_minutes',
-        'is_active', 'last_scraped_at', 'last_error', 'result_count',
+        "name",
+        "url",
+        "frequency_minutes",
+        "is_active",
+        "last_scraped_at",
+        "last_error",
+        "result_count",
     ]
-    list_filter = ['is_active', 'extraction_type', 'last_scraped_at']
-    search_fields = ['name', 'url']
-    ordering = ['-last_scraped_at']
+    list_filter = ["is_active", "extraction_type", "last_scraped_at"]
+    search_fields = ["name", "url"]
+    ordering = ["-last_scraped_at"]
     inlines = [ScrapedResultInline]
 
-    readonly_fields = ['last_scraped_at', 'last_error', 'result_count', 'rules_rendered']
+    readonly_fields = [
+        "last_scraped_at",
+        "last_error",
+        "result_count",
+        "rules_rendered",
+    ]
     fields = [
-        'name', 'url', 'extraction_type', 'frequency_minutes', 'is_active',
-        'rules',          # editable textarea
-        'rules_rendered', # read-only preview of saved rules
-        'last_scraped_at', 'last_error',
+        "name",
+        "url",
+        "extraction_type",
+        "frequency_minutes",
+        "is_active",
+        "rules",  # editable textarea
+        "rules_rendered",  # read-only preview of saved rules
+        "last_scraped_at",
+        "last_error",
     ]
 
     def result_count(self, obj: ScrapingSource) -> int:
         """Total number of scraped results for this source."""
         return obj.results.count()
-    result_count.short_description = 'Result Count'
+
+    result_count.short_description = "Result Count"
 
     def rules_rendered(self, obj: ScrapingSource) -> str:
         """Syntax-highlighted read-only preview of the saved rules JSON."""
         if not obj.rules:
             return mark_safe('<em style="color:#999">— no rules —</em>')
         return mark_safe(_render_data(obj.rules))
-    rules_rendered.short_description = 'Rules Preview (read-only)'
+
+    rules_rendered.short_description = "Rules Preview (read-only)"
 
 
 # ---------------------------------------------------------------------------
 # ScrapedResult
 # ---------------------------------------------------------------------------
+
 
 @admin.register(ScrapedResult)
 class ScrapedResultAdmin(admin.ModelAdmin):
@@ -252,12 +272,26 @@ class ScrapedResultAdmin(admin.ModelAdmin):
     this result to the immediately preceding one.
     """
 
-    list_display = ['source', 'created_at', 'has_changed_badge', 'data_preview']
-    list_filter = ['source', 'has_changed', 'created_at']
-    search_fields = ['source__name', 'data__icontains']
-    readonly_fields = ['id', 'source', 'created_at', 'has_changed', 'data_rendered', 'diff_rendered']
-    fields = ['id', 'source', 'created_at', 'has_changed', 'data_rendered', 'diff_rendered']
-    ordering = ['-created_at']
+    list_display = ["source", "created_at", "has_changed_badge", "data_preview"]
+    list_filter = ["source", "has_changed", "created_at"]
+    search_fields = ["source__name", "data__icontains"]
+    readonly_fields = [
+        "id",
+        "source",
+        "created_at",
+        "has_changed",
+        "data_rendered",
+        "diff_rendered",
+    ]
+    fields = [
+        "id",
+        "source",
+        "created_at",
+        "has_changed",
+        "data_rendered",
+        "diff_rendered",
+    ]
+    ordering = ["-created_at"]
 
     def has_changed_badge(self, obj: ScrapedResult) -> str:
         """Coloured badge indicating whether data changed on this scrape."""
@@ -275,35 +309,44 @@ class ScrapedResultAdmin(admin.ModelAdmin):
             '<span style="background:#333;color:#999;padding:2px 8px;'
             'border-radius:4px;font-size:12px">? Unknown</span>'
         )
-    has_changed_badge.short_description = 'Changed'
-    has_changed_badge.admin_order_field = 'has_changed'
+
+    has_changed_badge.short_description = "Changed"
+    has_changed_badge.admin_order_field = "has_changed"
 
     def data_preview(self, obj: ScrapedResult) -> str:
         """Truncated data string for the list column."""
         data_str: str = str(obj.data)
-        return data_str[:80] + '…' if len(data_str) > 80 else data_str
-    data_preview.short_description = 'Data Preview'
+        return data_str[:80] + "…" if len(data_str) > 80 else data_str
+
+    data_preview.short_description = "Data Preview"
 
     def data_rendered(self, obj: ScrapedResult) -> str:
         """Full formatted data view on the detail page (table or highlighted JSON)."""
         return mark_safe(_render_data(obj.data))
-    data_rendered.short_description = 'Data'
+
+    data_rendered.short_description = "Data"
 
     def diff_rendered(self, obj: ScrapedResult) -> str:
         """Colour-coded diff vs. the previous scrape — shown only when has_changed=True."""
         if obj.has_changed is not True:
-            return mark_safe('<em style="color:#555">— no diff (data unchanged or unknown) —</em>')
+            return mark_safe(
+                '<em style="color:#555">— no diff (data unchanged or unknown) —</em>'
+            )
 
         previous: Optional[ScrapedResult] = (
-            ScrapedResult.objects
-            .filter(source=obj.source, created_at__lt=obj.created_at)
-            .order_by('-created_at')
-            .only('data')
+            ScrapedResult.objects.filter(
+                source=obj.source, created_at__lt=obj.created_at
+            )
+            .order_by("-created_at")
+            .only("data")
             .first()
         )
 
         if previous is None:
-            return mark_safe('<em style="color:#555">— first scrape for this source, no previous result to compare —</em>')
+            return mark_safe(
+                '<em style="color:#555">— first scrape for this source, no previous result to compare —</em>'
+            )
 
         return mark_safe(_render_diff(previous.data, obj.data))
-    diff_rendered.short_description = 'Diff vs. Previous'
+
+    diff_rendered.short_description = "Diff vs. Previous"

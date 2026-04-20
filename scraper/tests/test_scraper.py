@@ -6,25 +6,30 @@ import pytest
 from bs4 import BeautifulSoup
 from scraper.scraper import WebsiteScraper
 
+
 def test_extract_field_missing_element():
     scraper = WebsiteScraper()
     soup = BeautifulSoup("<html><body><h1>Title</h1></body></html>", "html.parser")
-    
+
     # Element .price does not exist
     rule = {"selector": ".price", "type": "single"}
     result = scraper._extract_field(soup, rule)
-    
+
     assert result is None
+
 
 def test_extract_field_missing_attribute():
     scraper = WebsiteScraper()
-    soup = BeautifulSoup("<html><body><img src='test.jpg'></body></html>", "html.parser")
-    
+    soup = BeautifulSoup(
+        "<html><body><img src='test.jpg'></body></html>", "html.parser"
+    )
+
     # Attribute 'alt' is missing on the img tag
     rule = {"selector": "img", "attribute": "alt"}
     result = scraper._extract_field(soup, rule)
-    
+
     assert result is None
+
 
 def test_extract_field_nested_partial_missing():
     scraper = WebsiteScraper()
@@ -42,13 +47,10 @@ def test_extract_field_nested_partial_missing():
     rule = {
         "selector": ".item",
         "type": "nested",
-        "fields": {
-            "name": {"selector": ".name"},
-            "price": {"selector": ".price"}
-        }
+        "fields": {"name": {"selector": ".name"}, "price": {"selector": ".price"}},
     }
     result = scraper._extract_field(soup, rule)
-    
+
     assert len(result) == 2
     assert result[0]["name"] == "Item 1"
     assert result[0]["price"] is None

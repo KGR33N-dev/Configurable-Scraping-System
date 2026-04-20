@@ -24,28 +24,33 @@ def _compute_diff(old_data: Any, new_data: Any) -> dict:
     """
     if isinstance(old_data, dict) and isinstance(new_data, dict):
         all_keys = set(old_data.keys()) | set(new_data.keys())
-        result: dict[str, dict] = {'added': {}, 'removed': {}, 'changed': {}, 'unchanged': {}}
+        result: dict[str, dict] = {
+            "added": {},
+            "removed": {},
+            "changed": {},
+            "unchanged": {},
+        }
 
         for key in sorted(all_keys):
             in_old = key in old_data
             in_new = key in new_data
 
             if in_new and not in_old:
-                result['added'][key] = new_data[key]
+                result["added"][key] = new_data[key]
             elif in_old and not in_new:
-                result['removed'][key] = old_data[key]
+                result["removed"][key] = old_data[key]
             elif old_data[key] != new_data[key]:
-                result['changed'][key] = {'from': old_data[key], 'to': new_data[key]}
+                result["changed"][key] = {"from": old_data[key], "to": new_data[key]}
             else:
-                result['unchanged'][key] = old_data[key]
+                result["unchanged"][key] = old_data[key]
 
         return result
 
     return {
-        'type': 'non_dict',
-        'changed': old_data != new_data,
-        'from': old_data,
-        'to': new_data,
+        "type": "non_dict",
+        "changed": old_data != new_data,
+        "from": old_data,
+        "to": new_data,
     }
 
 
@@ -68,22 +73,22 @@ class ScrapingSourceViewSet(viewsets.ModelViewSet):
     """
 
     def get_queryset(self) -> QuerySet[ScrapingSource]:
-        qs = ScrapingSource.objects.order_by('name')
-        url: Optional[str] = self.request.query_params.get('url')
+        qs = ScrapingSource.objects.order_by("name")
+        url: Optional[str] = self.request.query_params.get("url")
         if url:
             qs = qs.filter(url=url)
-        if self.action == 'list':
+        if self.action == "list":
             # annotate avoids N+1 — one COUNT(*) for all sources
-            qs = qs.annotate(result_count=Count('results'))
+            qs = qs.annotate(result_count=Count("results"))
         return qs
 
     def get_serializer_class(self) -> Type[BaseSerializer]:
         """Use lightweight list serializer to avoid loading full result history."""
-        if self.action == 'list':
+        if self.action == "list":
             return ScrapingSourceListSerializer
         return ScrapingSourceSerializer
 
-    @action(detail=True, methods=['post'], url_path='run_now')
+    @action(detail=True, methods=["post"], url_path="run_now")
     def run_now(self, request: Request, pk: Optional[int] = None) -> Response:
         """Enqueue an immediate scrape for this source. Returns HTTP 202."""
         source: ScrapingSource = self.get_object()
@@ -97,10 +102,12 @@ class ScrapingSourceViewSet(viewsets.ModelViewSet):
             status=status.HTTP_202_ACCEPTED,
         )
 
-    @action(detail=False, methods=['post'], url_path='bulk_run_now')
+    @action(detail=False, methods=["post"], url_path="bulk_run_now")
     def bulk_run_now(self, request: Request) -> Response:
         """Enqueue a scrape for every active source. Tasks run in parallel. Returns HTTP 202."""
-        active_sources: QuerySet[ScrapingSource] = ScrapingSource.objects.filter(is_active=True)
+        active_sources: QuerySet[ScrapingSource] = ScrapingSource.objects.filter(
+            is_active=True
+        )
         count: int = active_sources.count()
         for source in active_sources:
             perform_scraping_task.delay(source.id)
@@ -109,7 +116,7 @@ class ScrapingSourceViewSet(viewsets.ModelViewSet):
             status=status.HTTP_202_ACCEPTED,
         )
 
-    @action(detail=True, methods=['get'], url_path='diff')
+    @action(detail=True, methods=["get"], url_path="diff")
     def diff(self, request: Request, pk: Optional[int] = None) -> Response:
         """
         Compare the two most recent scraping results for this source.
@@ -119,10 +126,9 @@ class ScrapingSourceViewSet(viewsets.ModelViewSet):
         """
         source: ScrapingSource = self.get_object()
         results: list[ScrapedResult] = list(
-            ScrapedResult.objects
-            .filter(source=source)
-            .order_by('-created_at')
-            .only('id', 'data', 'has_changed', 'created_at')[:2]
+            ScrapedResult.objects.filter(source=source)
+            .order_by("-created_at")
+            .only("id", "data", "has_changed", "created_at")[:2]
         )
 
         if len(results) < 2:
@@ -135,23 +141,25 @@ class ScrapingSourceViewSet(viewsets.ModelViewSet):
             )
 
         new_result, old_result = results[0], results[1]
-        return Response({
-            "source_id": source.id,
-            "source_name": source.name,
-            "compared": {
-                "from": {"id": old_result.id, "created_at": old_result.created_at},
-                "to": {
-                    "id": new_result.id,
-                    "created_at": new_result.created_at,
-                    "has_changed": new_result.has_changed,
+        return Response(
+            {
+                "source_id": source.id,
+                "source_name": source.name,
+                "compared": {
+                    "from": {"id": old_result.id, "created_at": old_result.created_at},
+                    "to": {
+                        "id": new_result.id,
+                        "created_at": new_result.created_at,
+                        "has_changed": new_result.has_changed,
+                    },
                 },
-            },
-            "diff": _compute_diff(old_result.data, new_result.data),
-        })
+                "diff": _compute_diff(old_result.data, new_result.data),
+            }
+        )
 
 
 class ScrapedResultViewSet(
-    mixins.ListModelMixin,      # GET /api/results/
+    mixins.ListModelMixin,  # GET /api/results/
     mixins.RetrieveModelMixin,  # GET /api/results/{id}/
     viewsets.GenericViewSet,
 ):
@@ -171,11 +179,13 @@ class ScrapedResultViewSet(
 
     def get_queryset(self) -> QuerySet[ScrapedResult]:
         # select_related avoids N+1 when serializing the 'source' FK
-        qs: QuerySet[ScrapedResult] = ScrapedResult.objects.select_related('source').all()
-        source_id: Optional[str] = self.request.query_params.get('source')
-        url: Optional[str] = self.request.query_params.get('url')
-        missing_field: Optional[str] = self.request.query_params.get('missing_field')
-        changed_only: Optional[str] = self.request.query_params.get('changed_only')
+        qs: QuerySet[ScrapedResult] = ScrapedResult.objects.select_related(
+            "source"
+        ).all()
+        source_id: Optional[str] = self.request.query_params.get("source")
+        url: Optional[str] = self.request.query_params.get("url")
+        missing_field: Optional[str] = self.request.query_params.get("missing_field")
+        changed_only: Optional[str] = self.request.query_params.get("changed_only")
 
         if source_id is not None:
             qs = qs.filter(source_id=source_id)
@@ -184,10 +194,10 @@ class ScrapedResultViewSet(
         if missing_field:
             # PostgreSQL JSONB: missing key and key=null are two distinct states
             qs = qs.filter(
-                Q(**{f"data__{missing_field}__isnull": True}) |
-                Q(data__contains={missing_field: None})
+                Q(**{f"data__{missing_field}__isnull": True})
+                | Q(data__contains={missing_field: None})
             )
-        if changed_only and changed_only.lower() == 'true':
+        if changed_only and changed_only.lower() == "true":
             qs = qs.filter(has_changed=True)
 
         return qs

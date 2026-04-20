@@ -9,8 +9,8 @@ class ScrapedResultSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ScrapedResult
-        fields = ['id', 'source', 'data', 'has_changed', 'created_at']
-        read_only_fields = ['id', 'source', 'has_changed', 'created_at']
+        fields = ["id", "source", "data", "has_changed", "created_at"]
+        read_only_fields = ["id", "source", "has_changed", "created_at"]
 
 
 class ScrapedResultInlineSerializer(serializers.ModelSerializer):
@@ -21,8 +21,8 @@ class ScrapedResultInlineSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = ScrapedResult
-        fields = ['id', 'data', 'has_changed', 'created_at']
-        read_only_fields = ['id', 'data', 'has_changed', 'created_at']
+        fields = ["id", "data", "has_changed", "created_at"]
+        read_only_fields = ["id", "data", "has_changed", "created_at"]
 
 
 class ScrapingSourceListSerializer(serializers.ModelSerializer):
@@ -38,12 +38,17 @@ class ScrapingSourceListSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScrapingSource
         fields = [
-            'id', 'name', 'url',
-            'extraction_type', 'frequency_minutes',
-            'is_active', 'last_error', 'last_scraped_at',
-            'result_count',
+            "id",
+            "name",
+            "url",
+            "extraction_type",
+            "frequency_minutes",
+            "is_active",
+            "last_error",
+            "last_scraped_at",
+            "result_count",
         ]
-        read_only_fields = ['id', 'last_error', 'last_scraped_at', 'result_count']
+        read_only_fields = ["id", "last_error", "last_scraped_at", "result_count"]
 
 
 class ScrapingSourceSerializer(serializers.ModelSerializer):
@@ -59,16 +64,22 @@ class ScrapingSourceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ScrapingSource
         fields = [
-            'id', 'name', 'url',
-            'rules', 'extraction_type', 'frequency_minutes',
-            'is_active', 'last_error', 'last_scraped_at',
-            'recent_results',
+            "id",
+            "name",
+            "url",
+            "rules",
+            "extraction_type",
+            "frequency_minutes",
+            "is_active",
+            "last_error",
+            "last_scraped_at",
+            "recent_results",
         ]
-        read_only_fields = ['id', 'last_error', 'last_scraped_at', 'recent_results']
+        read_only_fields = ["id", "last_error", "last_scraped_at", "recent_results"]
 
     def get_recent_results(self, obj: ScrapingSource) -> list[dict[str, Any]]:
         """Return the 10 latest results. Full history via /api/results/?source=<id>."""
-        results = obj.results.order_by('-created_at')[:10]
+        results = obj.results.order_by("-created_at")[:10]
         return ScrapedResultInlineSerializer(results, many=True).data
 
     def validate_rules(self, value: dict) -> dict:
@@ -84,7 +95,9 @@ class ScrapingSourceSerializer(serializers.ModelSerializer):
           path       — dotted JSON path for extraction_type='json'
         """
         if not value:
-            raise serializers.ValidationError("Scraping rules must be a valid, non-empty JSON object.")
+            raise serializers.ValidationError(
+                "Scraping rules must be a valid, non-empty JSON object."
+            )
 
         rule_schema: dict = {
             "type": "object",
@@ -92,7 +105,16 @@ class ScrapingSourceSerializer(serializers.ModelSerializer):
                 "selector": {"type": "string", "minLength": 1},
                 "type": {"enum": ["single", "list", "nested"]},
                 "attribute": {"type": "string", "minLength": 1},
-                "format": {"enum": ["decimal", "int", "bool", "strip", "uppercase", "lowercase"]},
+                "format": {
+                    "enum": [
+                        "decimal",
+                        "int",
+                        "bool",
+                        "strip",
+                        "uppercase",
+                        "lowercase",
+                    ]
+                },
                 "fields": {"type": "object"},
                 "path": {"type": "string", "minLength": 1},
             },
@@ -125,14 +147,16 @@ class ScrapingSourceSerializer(serializers.ModelSerializer):
         try:
             validate(instance=value, schema=master_schema)
             for key, config in value.items():
-                if key != 'pagination' and config.get('type') == 'nested':
-                    if not config.get('fields'):
+                if key != "pagination" and config.get("type") == "nested":
+                    if not config.get("fields"):
                         raise serializers.ValidationError(
                             f"Field '{key}' is type 'nested' but missing 'fields' object."
                         )
         except JsonSchemaError as e:
             # Format path for readability: root -> field -> subfield
             path: str = " -> ".join([str(p) for p in e.path]) if e.path else "root"
-            raise serializers.ValidationError(f"Invalid JSON structure ({path}): {e.message}")
+            raise serializers.ValidationError(
+                f"Invalid JSON structure ({path}): {e.message}"
+            )
 
         return value

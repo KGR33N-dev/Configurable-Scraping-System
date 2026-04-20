@@ -23,7 +23,7 @@ _LOCK_TIMEOUT_SECONDS: int = 60 * 11  # 11 minutes
     soft_time_limit=600,
     autoretry_for=(httpx.RequestError,),
     retry_backoff=True,
-    retry_jitter=True,   # Prevents thundering-herd on mass retries
+    retry_jitter=True,  # Prevents thundering-herd on mass retries
     max_retries=3,
 )
 def perform_scraping_task(self, source_id: int) -> Optional[str]:
@@ -35,7 +35,9 @@ def perform_scraping_task(self, source_id: int) -> Optional[str]:
     """
     lock_key: str = f"scraping_lock_source_{source_id}"
     # cache.add() is atomic — returns True only if the key did not exist
-    lock_acquired: bool = cache.add(lock_key, self.request.id, timeout=_LOCK_TIMEOUT_SECONDS)
+    lock_acquired: bool = cache.add(
+        lock_key, self.request.id, timeout=_LOCK_TIMEOUT_SECONDS
+    )
 
     if not lock_acquired:
         logger.warning(
@@ -68,27 +70,28 @@ def perform_scraping_task(self, source_id: int) -> Optional[str]:
 
         # Detect changes — fetch only the data column to avoid unnecessary joins
         previous: Optional[ScrapedResult] = (
-            ScrapedResult.objects
-            .filter(source=source)
-            .order_by('-created_at')
-            .only('data')
+            ScrapedResult.objects.filter(source=source)
+            .order_by("-created_at")
+            .only("data")
             .first()
         )
         if previous is None:
             has_changed: bool = True  # First scrape for this source
         else:
-            has_changed = (scraped_data != previous.data)
+            has_changed = scraped_data != previous.data
 
         if has_changed:
             logger.info(f"[CHANGE] Data changed for '{source.name}'")
         else:
             logger.debug(f"[NO CHANGE] Data unchanged for '{source.name}'")
 
-        ScrapedResult.objects.create(source=source, data=scraped_data, has_changed=has_changed)
+        ScrapedResult.objects.create(
+            source=source, data=scraped_data, has_changed=has_changed
+        )
 
         source.last_scraped_at = timezone.now()
         source.last_error = None
-        source.save(update_fields=['last_scraped_at', 'last_error'])
+        source.save(update_fields=["last_scraped_at", "last_error"])
 
         logger.info(f"[OK] Successfully scraped: {source.name}")
         return f"Success: {source.name}"
@@ -96,7 +99,7 @@ def perform_scraping_task(self, source_id: int) -> Optional[str]:
     except Exception as e:
         error_msg: str = str(e)
         source.last_error = error_msg
-        source.save(update_fields=['last_error'])
+        source.save(update_fields=["last_error"])
         logger.error(f"[ERROR] Scraping failed for '{source.name}': {error_msg}")
         raise e  # Re-raise so Celery can retry on httpx.RequestError
 
@@ -126,7 +129,9 @@ def manager_heartbeat() -> str:
         if not source.last_scraped_at:
             needs_scraping = True
         else:
-            next_scrape_time = source.last_scraped_at + timedelta(minutes=source.frequency_minutes)
+            next_scrape_time = source.last_scraped_at + timedelta(
+                minutes=source.frequency_minutes
+            )
             needs_scraping = now >= next_scrape_time
 
         if needs_scraping:

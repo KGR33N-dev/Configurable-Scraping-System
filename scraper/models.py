@@ -16,8 +16,8 @@ class ScrapingSource(models.Model):
 
     extraction_type: str = models.CharField(
         max_length=20,
-        choices=[('html', 'HTML'), ('json', 'JSON')],
-        default='html',
+        choices=[("html", "HTML"), ("json", "JSON")],
+        default="html",
     )
 
     frequency_minutes: int = models.PositiveIntegerField(
@@ -35,7 +35,7 @@ class ScrapingSource(models.Model):
     last_scraped_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        ordering = ['name']
+        ordering = ["name"]
 
     def __str__(self) -> str:
         return f"{self.name} ({self.url})"
@@ -52,7 +52,7 @@ class ScrapedResult(models.Model):
     source = models.ForeignKey(
         ScrapingSource,
         on_delete=models.CASCADE,
-        related_name='results',
+        related_name="results",
     )
 
     data: dict = models.JSONField()
@@ -71,7 +71,7 @@ class ScrapedResult(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
-        ordering = ['-created_at']
+        ordering = ["-created_at"]
 
     def __str__(self) -> str:
         return f"Result for '{self.source.name}' at {self.created_at:%Y-%m-%d %H:%M}"
